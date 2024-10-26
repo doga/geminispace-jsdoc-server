@@ -1,0 +1,23 @@
+{
+  "version": "4",
+  "specifiers": {
+    "jsr:@arma/qgeminiserver@2.0.3": "2.0.3",
+    "jsr:@std/media-types@^1.0.3": "1.0.3",
+    "jsr:@std/path@^1.0.7": "1.0.7"
+  },
+  "jsr": {
+    "@arma/qgeminiserver@2.0.3": {
+      "integrity": "51f660cc89074d68c37bc12e3368deddb8cb931b23fdbf81c41618e206344ded",
+      "dependencies": [
+        "jsr:@std/media-types",
+        "jsr:@std/path"
+      ]
+    },
+    "@std/media-types@1.0.3": {
+      "integrity": "b12d30a7852f7578f4d210622df713bbfd1cbdd9b4ec2eaf5c1845ab70bab159"
+    },
+    "@std/path@1.0.7": {
+      "integrity": "76a689e07f0e15dcc6002ec39d0866797e7156629212b28f27179b8a5c3b33a1"
+    }
+  }
+}

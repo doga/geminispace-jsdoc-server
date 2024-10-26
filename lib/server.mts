@@ -125,7 +125,7 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{
 
 getFileInfo = async (path: string): Promise<Deno.FileInfo> => {
   const 
-  expandedPath = `${jsdocDir}/${path}`,
+  expandedPath = `${jsdocDir}/${path}`, // BUG? ensure that paths that are outside of jsdocDir are redirected to / ?
   fileInfo     = await Deno.stat(expandedPath);
 
   return fileInfo;
@@ -303,6 +303,14 @@ dirRoute = new Route<{path?: string}>('/:path', async (ctx) => {
   }
 }),
 
+/**
+ * @see {@link gemini://mozz.us/files/rfc_gemini_favicon.gmi|RFC: Gemini favicon}
+*/
+// faviconRoute = new Route<{path?: string}>('/favicon.txt', async (ctx) => {
+  
+//   ctx.response.
+// }),
+
 serve = async (): Promise<void> => {
   while(true) try {
     const 
@@ -325,6 +333,18 @@ serve = async (): Promise<void> => {
       latencyInMilliseconds = egressDate.getTime() - ingressDate.getTime(),
       latencyTag = ` • ${latencyInMilliseconds} ms`,
       cacheTag = servingFromCache ? ' • from cache' : '',
+
+      /*
+      BUG what happens if the request is malformed? 
+      
+      Here the path is missing (this really happened):
+      [2024-05-28T14:14:40.184Z] /robots.txt • 4 ms
+      [2024-05-28T19:27:47.974Z] / • 7 ms • from cache
+      [2024-05-29T08:15:10.315Z] / • 5 ms • from cache
+      [2024-05-29T08:15:11.946Z] / • 1 ms • from cache
+      [2024-05-29T08:32:17.921Z]  • 4 ms ⬅︎ ⚠️
+      [2024-05-29T08:32:18.086Z] /favicon.txt • 3 ms
+      */
       logLine = `[${ingressDate.toISOString()}] ${ctx.request.path}${latencyTag}${cacheTag}`;
 
       console.info(logLine);

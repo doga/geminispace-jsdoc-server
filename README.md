@@ -1,10 +1,10 @@
-# doc-server
+# Geminispace JSDoc server
 
-A Gemini server for serving JSDoc documentation on the [Deno](https://deno.com/) JavaScript runtime.
+A [Geminispace](https://geminiquickst.art/) server for serving [JSDoc](https://jsdoc.app/) documentation with the [Deno](https://deno.com/) TypeScript runtime.
 
-## What is Gemini?
+## What is Geminispace?
 
-[Gemini](https://geminiprotocol.net/) is a new Web-like content platform with its own protocol and its own Markdown-like content format. It is especially suitable for browsing content from the terminal. Recommended Gemini client: [amfora](https://github.com/makew0rld/amfora?tab=readme-ov-file#amfora).
+Geminispace is a new Web-like content platform with its own protocol and its own Markdown-like content format. It is especially suitable for browsing content from the terminal. Recommended Gemini client: [amfora](https://github.com/makew0rld/amfora?tab=readme-ov-file#amfora).
 
 ## How to install
 
