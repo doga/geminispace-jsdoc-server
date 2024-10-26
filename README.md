@@ -6,12 +6,6 @@ A [Geminispace](https://geminiquickst.art/) server for serving [JSDoc](https://j
 
 Geminispace is a new Web-like content platform with its own protocol and its own Markdown-like content format. It is especially suitable for browsing content from the terminal. Recommended Gemini client: [amfora](https://github.com/makew0rld/amfora?tab=readme-ov-file#amfora).
 
-## How to install
-
-```shell
-git clone https://github.com/doga/doc-server.git
-```
-
 ## Usage
 
 ### 1. Create a TLS certificate and private key
@@ -53,7 +47,7 @@ TLS_CERT_KEY='./cert/key.pem' \
 CACHE_SIZE='100' \
 HOSTNAME='0.0.0.0' \
 PORT='1965'
-deno task server
+deno run --allow-env --allow-net --allow-read jsr:@arma/geminispace-jsdoc-server@2.0.0/main
 ```
 
 All environment variables are optional. The command above shows their default values.
@@ -69,10 +63,10 @@ Current status:
 
 ## Live servers
 
-These Gemini capsules are running on doc-server:
+These Geminispace capsules are running on `geminispace-jsdoc-server`:
 
 - __Qworum JSDoc server__: [gemini://qworum-jdoc.ddns.net/](gemini://qworum-jdoc.ddns.net/)
 
-To add your doc-server capsule here, simply send a pull request.
+To add your capsule here, simply send a pull request.
 
 ∎
