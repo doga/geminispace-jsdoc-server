@@ -47,7 +47,7 @@ TLS_CERT_KEY='./cert/key.pem' \
 CACHE_SIZE='100' \
 HOSTNAME='0.0.0.0' \
 PORT='1965'
-deno run --allow-env --allow-net --allow-read jsr:@arma/geminispace-jsdoc-server@2.0.0/main
+deno run --allow-env --allow-net --allow-read jsr:@arma/geminispace-jsdoc-server@2.0.2/main
 ```
 
 All environment variables are optional. The command above shows their default values.
