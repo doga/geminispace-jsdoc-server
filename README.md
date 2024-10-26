@@ -2,7 +2,7 @@
 
 [![JSR](https://jsr.io/badges/@arma/geminispace-jsdoc-server)](https://jsr.io/@arma/geminispace-jsdoc-server)
 
-A [Geminispace](https://geminiquickst.art/) server for serving [JSDoc](https://jsdoc.app/) documentation with the [Deno](https://deno.com/) TypeScript runtime.
+A [Geminispace](https://geminiquickst.art/) server for serving [JSDoc](https://jsdoc.app/) documentation with the [Deno 2+](https://deno.com/) TypeScript runtime.
 
 ## What is Geminispace?
 
