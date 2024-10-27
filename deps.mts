@@ -4,7 +4,7 @@ export type {
   Middleware,
   RouteContext, RouteHandler, Parameters,
   StatusCodeFailure,
-} from 'jsr:@arma/qgeminiserver@2.0.3';
+} from 'jsr:@arma/qgeminiserver@^2.0.3';
 
 export { 
   Application,
@@ -30,4 +30,4 @@ export {
   serveStatic,
   handleRoutes,
   handleRedirects,
-} from 'jsr:@arma/qgeminiserver@2.0.3';
+} from 'jsr:@arma/qgeminiserver@^2.0.3';

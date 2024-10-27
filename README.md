@@ -50,12 +50,24 @@ CACHE_SIZE='100' \
 HOSTNAME='0.0.0.0' \
 PORT='1965' \
 deno run --allow-env --allow-net --allow-read \
-jsr:@arma/geminispace-jsdoc-server@2.0.4/main
+jsr:@arma/geminispace-jsdoc-server@2.0.5/main
 ```
 
 All environment variables are optional. The command above shows their default values.
 
 `CACHE_SIZE` defines the size of the in-memory cache. 1 means 10 000 bytes. 0 disables the cache.
+
+## Dependencies
+
+This TypeScript module depends on [qgeminiserver](https://github.com/doga/qgeminiserver).
+
+```mermaid
+---
+title: Dependencies
+---
+flowchart LR
+GeminispaceJSDocServer[geminispace-jsdoc-server] --imports--> QGeminiServer[qgeminiserver]
+```
 
 ## To do
 
