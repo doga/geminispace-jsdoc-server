@@ -3,11 +3,11 @@ import { convert, Effect } from "./text-effects.mts";
 const _ = new LineText('');
 
 type Value = {
-  bytes: Uint8Array,
+  bytes    : Uint8Array,
   timestamp: Date,
 };
 
-class Cache {
+class Cache { // BUG use Deno KV to be able to serve multiple requests at the same time without race conditions (or make sure that all content is cached at startup time)
   #maxSize: number;
   #size: number;
   #cache = new Map<string, Value>();
@@ -20,7 +20,7 @@ class Cache {
    * @param {number | undefined} size Cache size. Unit is 10_000 bytes. Default is 100.
    */
   constructor(size?: number) {
-    size = Math.floor(size || 100);
+    size = Math.floor(size ?? 100);
     if(size<1)size = 1;
     size = size * 10_000;
     // console.debug(`Setting cache size to ${size} bytes`);

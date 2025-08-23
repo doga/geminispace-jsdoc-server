@@ -20,12 +20,17 @@ type ReturnTag = {
   type: string,
 };
 
+type ThrowsTag = {
+  kind: 'throws',
+  type: string,
+};
+
 type UnsupportedTag = {
   kind: 'unsupported',
   value: string,
 };
 
-type Tag = SeeTag | ReturnTag | ParamTag | ExampleTag | UnsupportedTag;
+type Tag = SeeTag | ReturnTag | ParamTag | ExampleTag | ThrowsTag | UnsupportedTag;
 
 type JsDoc = {
   doc: string, // TODO optional?
@@ -80,19 +85,29 @@ type ClassDef = {
 
 };
 
+type DeclarationKind =
+  | 'export'
+  | 'private';
+
 type ClassDefinition = {
   kind           : 'class',
-  declarationKind: string,
+  declarationKind: DeclarationKind,
   name           : string,
   classDef       : ClassDef,
 };
 
 type Definition = ClassDefinition;
 
+type JsDocDocument = {
+  version: number,
+  nodes  : Definition[]
+}
+
 export type {
   JsDoc, Tag, SeeTag, ExampleTag, ReturnTag, ParamTag, UnsupportedTag,
   Param,
   Constructor, FunctionDef, MethodDef,
-  ClassDef,
+  ClassDef, DeclarationKind,
   Definition, ClassDefinition,
+  JsDocDocument
 };

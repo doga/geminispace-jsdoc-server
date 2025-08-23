@@ -1,7 +1,8 @@
 {
-  "version": "4",
+  "version": "5",
   "specifiers": {
     "jsr:@arma/qgeminiserver@2.0.3": "2.0.3",
+    "jsr:@arma/qgeminiserver@^2.0.3": "2.0.3",
     "jsr:@std/media-types@^1.0.3": "1.0.3",
     "jsr:@std/path@^1.0.7": "1.0.7"
   },

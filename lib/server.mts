@@ -7,23 +7,26 @@ import {
 } from '../deps.mts';
 
 import type {
-  JsDoc, Param, Tag, // SeeTag, ExampleTag, ReturnTag, ParamTag, UnsupportedTag,
-  Constructor, MethodDef, // FunctionDef, ClassDef,
-  Definition, // ClassDefinition,
+  JsDoc, Tag, SeeTag, ExampleTag, ReturnTag, ParamTag, UnsupportedTag,
+  Param,
+  Constructor, FunctionDef, MethodDef,
+  ClassDef, DeclarationKind,
+  Definition, ClassDefinition,
+  JsDocDocument
 } from './jsdoc-types.mts';
 
 import { Cache } from './cache.mts';
 
 
 let 
-servingFromCache: boolean = false,
-jsdocDir: string,
-certFile: string,
-keyFile: string,
-cacheSize: number,
-cache: Cache | null,
-hostname: string,
-port: number
+servingFromCache: boolean = false, // BUG ? each incoming request should have its own "served from cache" flag?
+jsdocDir        : string,
+certFile        : string,
+keyFile         : string,
+cacheSize       : number,
+cache           : Cache | null,
+hostname        : string,
+port            : number
 ;
 
 const
@@ -65,10 +68,15 @@ dirPage = async (path: string):Promise<Line[]> => {
 },
 
 getJsdocLines = (jsdoc: JsDoc):Line[] =>{
+  // console.debug(`[getJsdocLines] jsdoc`, jsdoc)
   const lines: Line[] = [];
-  if(jsdoc.doc) [
-    new LineText(jsdoc.doc.trim()), _,
-  ];
+
+  if(jsdoc.doc){
+    lines.push(new LineText(jsdoc.doc.trim()));
+    lines.push(_);
+  }
+
+  if(jsdoc.tags)
   for (const tag of (jsdoc.tags as Tag[])) {
     switch (tag.kind) {
       case 'unsupported':
@@ -85,6 +93,7 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{
         break;
 
       case 'return':
+      case 'throws':
         lines.push(new LineText(`🏷  @${tag.kind} {${tag.type}}`));
         lines.push(_);
         break;
@@ -114,7 +123,7 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{
         break;
 
       default:
-        lines.push(new LineText(`🏷  @${tag.kind} ${tag.doc}`));
+        lines.push(new LineText(`🏷  @${tag.kind} (unknown tag)`));
         lines.push(_);
         break;
     }
@@ -132,79 +141,86 @@ getFileInfo = async (path: string): Promise<Deno.FileInfo> => {
 },
 
 docPage = async (path: string):Promise<Line[]> => {
-  // console.debug(`doc path: ${path}`);
+  // console.debug(`[docPage] jsdocDir: ${jsdocDir}`);
+  // console.debug(`[docPage] doc path: ${path}`);
   try {
     const 
     expandedPath  = `${jsdocDir}/${path}`,
     json          = await Deno.readTextFile(expandedPath),
-    sorter        = (a:Definition | MethodDef,b:Definition | MethodDef)=>{return a.name < b.name ? -1 : (a.name === b.name ? 0 : 1);},
-    jsdoc         = (JSON.parse(json) as Array<Definition>).sort(sorter),
+    jsdocDocument = JSON.parse(json) as JsDocDocument,
+    sort          = (def1: Definition|MethodDef, def2: Definition|MethodDef)=> (
+      def1.name < def2.name ? -1 : (def1.name === def2.name ? 0 : 1)
+    ),
+    filter        = (def: Definition|MethodDef)=> def.kind === 'class' && def.declarationKind === 'export',
+    definitions   = jsdocDocument.nodes.sort(sort).filter(filter),
     lines: Line[] = [_];
 
-    for (const def of jsdoc) {
-      // console.debug(`\nDefinition(name: ${def.name}, kind: ${def.kind})`);
-      if (def.kind === 'class' && def.declarationKind === 'export') {
-        // header
-        let classHeader = `${def.kind} ${def.name}`;
-        if (def.classDef.extends) {
-          classHeader += ` extends ${def.classDef.extends}`;
-        }
-        if ((def.classDef.implements as string[]).length>0) {
-          classHeader += ` implements ${(def.classDef.implements as string[]).join(', ')}`;
-        }
-        lines.push(new LineHeading(classHeader, 2));
-        lines.push(_);
+    // console.debug(`\ndefinitions`,definitions,definitions.length);
 
-        // constructor
-        for (const constr of (def.classDef.constructors as Constructor[])) {
-          // console.debug(`constructor`);
-          if (constr.jsDoc) {
-            // header
-            const 
-            paramNames: string = (constr.params as Param[]).map(p => p.name).join(', '),
-            constrHeader: string = `constructor(${paramNames})`;
+    for (const def of definitions) try {
+      // console.debug(`\nDefinition(name: ${def.name}, kind: ${def.kind}, declarationKind: ${def.declarationKind})`);
+      // header
+      let classHeader = `${def.kind} ${def.name}`;
+      if (def.classDef.extends) {
+        classHeader += ` extends ${def.classDef.extends}`;
+      }
+      if ((def.classDef.implements as string[]).length>0) {
+        classHeader += ` implements ${(def.classDef.implements as string[]).join(', ')}`;
+      }
+      lines.push(new LineHeading(classHeader, 2));
+      lines.push(_);
 
-            lines.push(new LineHeading(constrHeader, 3)); lines.push(_);
-
-            if (constr.jsDoc) {
-              const jsdocLines = getJsdocLines(constr.jsDoc);
-
-              for (const line of jsdocLines) lines.push(line);
-              lines.push(_);
-            }
-          }
-        }
-        // lines.push(_);
-
-        // methods
-        for (const method of (def.classDef.methods as MethodDef[]).sort(sorter)) {
-          // console.debug(`method: ${method.name}`);
+      // constructor
+      for (const constr of (def.classDef.constructors as Constructor[])) {
+        // console.debug(`constructor`);
+        if (constr.jsDoc) {
           // header
           const 
-          staticMarker = method.isStatic ? 'static ' : '',
-          asyncMarker = method.functionDef.isAsync ? 'async ' : '',
-          paramNames: string = (method.functionDef.params as Param[]).map(p => p.name).join(', '),
-          methodHeader: string = method.kind === 'getter' ? `getter ${method.name}` : `${staticMarker}${asyncMarker}${method.name}(${paramNames})`;
+          paramNames: string = (constr.params as Param[]).map(p => p.name).join(', '),
+          constrHeader: string = `constructor(${paramNames})`;
 
-          // console.debug(`method header: ${methodHeader}`);
-          lines.push(new LineHeading(methodHeader, 3)); lines.push(_);
+          lines.push(new LineHeading(constrHeader, 3)); lines.push(_);
 
-          if (method.jsDoc) {
-            // console.debug(`  reading jsdoc`);
-            const jsdocLines = getJsdocLines(method.jsDoc);
+          if (constr.jsDoc) {
+            const jsdocLines = getJsdocLines(constr.jsDoc);
 
             for (const line of jsdocLines) lines.push(line);
             lines.push(_);
           }
         }
-        lines.push(_);
       }
+      // lines.push(_);
+
+      // methods
+      for (const method of (def.classDef.methods as MethodDef[]).sort(sort)) {
+        // console.debug(`method: ${method.name}`);
+        // header
+        const 
+        staticMarker = method.isStatic ? 'static ' : '',
+        asyncMarker = method.functionDef.isAsync ? 'async ' : '',
+        paramNames: string = (method.functionDef.params as Param[]).map(p => p.name).join(', '),
+        methodHeader: string = method.kind === 'getter' ? `getter ${method.name}` : `${staticMarker}${asyncMarker}${method.name}(${paramNames})`;
+
+        // console.debug(`method header: ${methodHeader}`);
+        lines.push(new LineHeading(methodHeader, 3)); lines.push(_);
+
+        if (method.jsDoc) {
+          // console.debug(`  reading jsdoc`);
+          const jsdocLines = getJsdocLines(method.jsDoc);
+
+          for (const line of jsdocLines) lines.push(line);
+          lines.push(_);
+        }
+      }
+      lines.push(_);
+    }catch(error){
+      console.error(`🔴 def error:`,error);
     }
 
     lines.push(_);
     return lines;
   } catch (_error) {
-    // console.error(`🔴 doc error: ${error}`);
+    // console.error(`🔴 doc error:`,error);
     return [] as Line[];
     // lines.push(new LineHeading('Error'));
     // lines.push(new LineText(`${error}`));
@@ -314,11 +330,12 @@ dirRoute = new Route<{path?: string}>('/:path', async (ctx) => {
 serve = async (): Promise<void> => {
   while(true) try {
     const 
-    key: string = await Deno.readTextFile(keyFile),
-    cert: string = await Deno.readTextFile(certFile),
+    key   : string         = await Deno.readTextFile(keyFile),
+    cert  : string         = await Deno.readTextFile(certFile),
     config: ConfigArgument = { key, cert, hostname, port },
-    app = new Application(config);
+    app                    = new Application(config);
 
+    // logger that prints req/resp info to stdout
     app.use(async (ctx, next) => {
       servingFromCache = false;
 
@@ -329,10 +346,10 @@ serve = async (): Promise<void> => {
       // console.debug(ctx.response);
       
       const 
-      egressDate = new Date(),
+      egressDate            = new Date(),
       latencyInMilliseconds = egressDate.getTime() - ingressDate.getTime(),
-      latencyTag = ` • ${latencyInMilliseconds} ms`,
-      cacheTag = servingFromCache ? ' • from cache' : '',
+      latencyTag            = ` • ${latencyInMilliseconds} ms`,
+      cacheTag              = servingFromCache ? ' • from cache' : '',
 
       /*
       BUG what happens if the request is malformed? 
@@ -355,8 +372,8 @@ serve = async (): Promise<void> => {
     ));
 
     app.use(handleRoutes(
-      mainRoute,
       dirRoute,
+      mainRoute,
     ));
 
     app.use((ctx) => {
@@ -364,7 +381,9 @@ serve = async (): Promise<void> => {
         new LineHeading('No routes matched'), 
       );
     });
+
     await app.start();
+
   } catch (error) {
     console.error('Restarting the server after this error: ', error);
     // return;
@@ -384,13 +403,13 @@ type ServerConfig = {
 };
 
 const configDefaults: Required<ServerConfig> = {
-  keyFile: './cert/key.pem',
+  keyFile : './cert/key.pem',
   certFile: './cert/cert.pem',
-  hostname: '0.0.0.0', 
-  port: 1965,
+  hostname: '0.0.0.0',
+  port    : 1965,
 
-  jsdocDir: './jsdoc',
-  cacheSize: 100, 
+  jsdocDir : './jsdoc',
+  cacheSize: 100,
 };
 
 class Server {
@@ -403,12 +422,12 @@ class Server {
   }
 
   async run(): Promise<void> {
-    keyFile = this.#config.keyFile;
+    keyFile  = this.#config.keyFile;
     certFile = this.#config.certFile;
     hostname = this.#config.hostname;
-    port = this.#config.port;
+    port     = this.#config.port;
 
-    jsdocDir = this.#config.jsdocDir;
+    jsdocDir  = this.#config.jsdocDir;
     cacheSize = this.#config.cacheSize;
 
     cache = cacheSize > 0 ? new Cache(cacheSize) : null;
