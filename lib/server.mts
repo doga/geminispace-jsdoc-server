@@ -1,9 +1,12 @@
+import type { 
+  ConfigArgument
+} from '../deps.mts';
 
 import { 
   Application,
-  Gemtext, Line, LineText, LineLink, LineHeading, // LineQuote, LineListItem, LinePreformattingToggle,
+  Gemtext, Line, LineText, LineLink, LineHeading, LineQuote, LineListItem, LinePreformattingToggle,
   handleRedirects, handleRoutes, Route,
-  ConfigArgument, // Redirect,
+  Redirect,
 } from '../deps.mts';
 
 import type {
@@ -98,6 +101,42 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{
         lines.push(_);
         break;
 
+      case 'example':
+        // console.debug(`[getJsdocLines] example tag`,tag.doc);
+        try {
+          lines.push(new LineText(`🏷  @${tag.kind}`));
+          const 
+          formattedTextSentry = '```',
+          docLines = tag.doc.split(/\r?\n/).map(line => line.trimEnd()).filter(line => line.length > 0),
+          formattedTextStartIndex = docLines.findIndex(line => line.startsWith(formattedTextSentry));
+
+          if (formattedTextStartIndex >= 0) {
+            // console.debug(`[getJsdocLines] formatted example tag`);
+            // skip non-formatted lines at the beginning
+            while (!docLines[0].startsWith(formattedTextSentry)) {
+              lines.push(new LineText(docLines[0]));
+              docLines.shift();
+            }
+
+            // handle the formatted lines
+            lines.push(new LinePreformattingToggle(docLines[0].substring(formattedTextSentry.length)));
+            docLines.shift();
+            while (docLines.length>0 && !docLines[0].startsWith(formattedTextSentry)) {
+              lines.push(new LineText(docLines[0]));
+              docLines.shift();
+            }
+            lines.push(new LinePreformattingToggle());
+          }else{
+            lines.push(...docLines.map(line => new LineText(line)));
+          }
+
+          lines.push(_);
+          // console.debug(`[getJsdocLines] formatted example tag as rendered`,lines.map(l => l.string));
+        } catch (error) {
+          console.error(`🏷  @${tag.kind} tag error: ${error}`);
+        }
+        break;
+
       case 'see':
         try {
           const 
@@ -118,13 +157,13 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{
           }
           lines.push(_);
         } catch (error) {
-          console.error(`🏷  @see tag error: ${error}`);
+          console.error(`🏷  @${tag.kind} tag error: ${error}`);
         }
         break;
 
       default:
-        lines.push(new LineText(`🏷  @${tag.kind} (unknown tag)`));
-        lines.push(_);
+        // lines.push(new LineText(`🏷  @${tag.kind} (unknown tag)`));
+        // lines.push(_);
         break;
     }
   }

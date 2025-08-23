@@ -1,12 +1,13 @@
 {
   "name": "@arma/geminispace-jsdoc-server",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "exports": {
     ".": "./mod.mts",
     "./main": "./main.ts"
   },
   "tasks": {
     "generate-tls-certificate": "openssl req -x509 -newkey rsa:2048 -keyout $TLS_CERT_KEY -out $TLS_CERT -days 365 -nodes",
+    "publish-to-jsr": "deno publish",
     "server": "deno run --allow-env --allow-net --allow-read ./main.ts",
     "test": "deno test test"
   }
