@@ -70,64 +70,89 @@ dirPage = async (path: string):Promise<Line[]> => {
   }
 },
 
-getJsdocLines = (jsdoc: JsDoc):Line[] =>{
+getJsdocLines = (jsdoc: JsDoc):Line[] =>{ // TODO return Gemtext (can be nested)
   // console.debug(`[getJsdocLines] jsdoc`, jsdoc)
-  const lines: Line[] = [];
+  const 
+  lines: Line[]       = [],
+  jsdocLinkMatcher    = /(?<linkStart>{@link\s+)(?<linkedObject>[^}]+)}/g, // TODO "see" tag has a ~duplicate
+  markdownLinkMatcher = /\[(?<linkName>[^\]]+)\]\((?<linkUrl>[^)]+)\)/g, 
+  replaceJsdocLink    = (_match:string, _linkStart:string, linkedObject:string) => {const parts = linkedObject.split('|'); return parts[parts.length-1].trim();},
+  replaceMarkdownLink = (_match:string, linkName:string, _linkUrl:string) => linkName;
 
   if(jsdoc.doc){
-    lines.push(new LineText(jsdoc.doc.trim()));
+    lines.push(new LineText(
+      jsdoc.doc.trim() // TODO remove Markdown "code" markup https://www.markdownguide.org/cheat-sheet/
+
+      // remove jsdoc link markup
+      .replaceAll(jsdocLinkMatcher, replaceJsdocLink)
+
+      // remove markdown link markup
+      .replaceAll(markdownLinkMatcher, replaceMarkdownLink)
+    ));
     lines.push(_);
   }
 
   if(jsdoc.tags)
   for (const tag of (jsdoc.tags as Tag[])) {
     switch (tag.kind) {
-      case 'unsupported':
-        lines.push(new LineText(`🏷  ${tag.value}`));
-        lines.push(_);
-        break;
+      // case 'unsupported':
+      //   lines.push(new LineText(`🏷  ${tag.value}`));
+      //   lines.push(_);
+      //   break;
 
       case 'param':
-        lines.push(new LineText(`🏷  @${tag.kind}`));
-        lines.push(new LineText(`  {${tag.type}}`));
-        lines.push(new LineText(`  🆔 ${tag.name}`));
-        lines.push(new LineText(`  💬 ${tag.doc}`));
+        lines.push(new LineText(`🏷  𝗣𝗮𝗿𝗮𝗺𝗲𝘁𝗲𝗿 ${tag.name}: ${tag.type}`));
+        if(typeof tag.doc === 'string' && tag.doc.trim().length > 0){
+          // remove any hyphen at the beginning of the parameter description
+          const doc = tag.doc.startsWith('-') ? tag.doc.substring(1).trim() : tag.doc;
+
+          lines.push(new LineText(`  ${doc}`));
+        }
         lines.push(_);
         break;
 
       case 'return':
+        lines.push(new LineText(`🏷  𝗥𝗲𝘁𝘂𝗿𝗻𝘀 ${tag.type}`));
+        lines.push(_);
+        break;
+
       case 'throws':
-        lines.push(new LineText(`🏷  @${tag.kind} {${tag.type}}`));
+        lines.push(new LineText(`🏷  𝗧𝗵𝗿𝗼𝘄𝘀 ${tag.type}`));
         lines.push(_);
         break;
 
       case 'example':
         // console.debug(`[getJsdocLines] example tag`,tag.doc);
         try {
-          lines.push(new LineText(`🏷  @${tag.kind}`));
           const 
           formattedTextSentry = '```',
           docLines = tag.doc.split(/\r?\n/).map(line => line.trimEnd()).filter(line => line.length > 0),
           formattedTextStartIndex = docLines.findIndex(line => line.startsWith(formattedTextSentry));
 
           if (formattedTextStartIndex >= 0) {
-            // console.debug(`[getJsdocLines] formatted example tag`);
-            // skip non-formatted lines at the beginning
-            while (!docLines[0].startsWith(formattedTextSentry)) {
-              lines.push(new LineText(docLines[0]));
-              docLines.shift();
+            // handle non-formatted lines at the beginning
+            const exampleTextTitle: string[] = [];
+            while (docLines.length>0 && !docLines[0].startsWith(formattedTextSentry)) {
+              exampleTextTitle.push(docLines.shift() ?? '');
             }
+            lines.push(new LineText(`🏷  𝗘𝘅𝗮𝗺𝗽𝗹𝗲 ${exampleTextTitle.join(' ')}`));
 
             // handle the formatted lines
-            lines.push(new LinePreformattingToggle(docLines[0].substring(formattedTextSentry.length)));
+            lines.push(new LinePreformattingToggle(docLines[0].substring(formattedTextSentry.length).trim()));
             docLines.shift();
             while (docLines.length>0 && !docLines[0].startsWith(formattedTextSentry)) {
               lines.push(new LineText(docLines[0]));
               docLines.shift();
             }
             lines.push(new LinePreformattingToggle());
-          }else{
-            lines.push(...docLines.map(line => new LineText(line)));
+
+          }else{ // example without formatted text
+            lines.push(
+              new LineText(`🏷  𝗘𝘅𝗮𝗺𝗽𝗹𝗲`),
+              new LinePreformattingToggle(),
+              ...docLines.map(line => new LineText(line)),
+              new LinePreformattingToggle(),
+            );
           }
 
           lines.push(_);
@@ -146,9 +171,9 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{
           if (match) {
             const 
             url = new URL((match.groups as {url:string}).url),
-            text = match.groups?.text.substring(1);
+            text = match.groups?.text.trim().substring(1);
 
-            lines.push(new LineText(`🏷  @${tag.kind}`));
+            lines.push(new LineText(`🏷  𝗦𝗲𝗲`));
             if (text) {
               lines.push(new LineLink(`${url}`, `${text}`));
             } else {
@@ -184,19 +209,19 @@ docPage = async (path: string):Promise<Line[]> => {
   // console.debug(`[docPage] doc path: ${path}`);
   try {
     const 
-    expandedPath  = `${jsdocDir}/${path}`,
-    json          = await Deno.readTextFile(expandedPath),
-    jsdocDocument = JSON.parse(json) as JsDocDocument,
-    sort          = (def1: Definition|MethodDef, def2: Definition|MethodDef)=> (
+    expandedPath    = `${jsdocDir}/${path}`,
+    json            = await Deno.readTextFile(expandedPath),
+    jsdocDocument   = JSON.parse(json) as JsDocDocument,
+    exportedClasses = (def: Definition|MethodDef)=> def.kind === 'class' && def.declarationKind === 'export',
+    byName          = (def1: Definition|MethodDef, def2: Definition|MethodDef)=> (
       def1.name < def2.name ? -1 : (def1.name === def2.name ? 0 : 1)
     ),
-    filter        = (def: Definition|MethodDef)=> def.kind === 'class' && def.declarationKind === 'export',
-    definitions   = jsdocDocument.nodes.sort(sort).filter(filter),
+    exportedClassDefinitions = jsdocDocument.nodes.filter(exportedClasses).sort(byName),
     lines: Line[] = [_];
 
     // console.debug(`\ndefinitions`,definitions,definitions.length);
 
-    for (const def of definitions) try {
+    for (const def of exportedClassDefinitions) try {
       // console.debug(`\nDefinition(name: ${def.name}, kind: ${def.kind}, declarationKind: ${def.declarationKind})`);
       // header
       let classHeader = `${def.kind} ${def.name}`;
@@ -207,6 +232,12 @@ docPage = async (path: string):Promise<Line[]> => {
         classHeader += ` implements ${(def.classDef.implements as string[]).join(', ')}`;
       }
       lines.push(new LineHeading(classHeader, 2));
+      if (def.jsDoc) {
+        // console.debug(`  reading jsdoc`);
+        const jsdocLines = getJsdocLines(def.jsDoc);
+
+        for (const line of jsdocLines) lines.push(line);
+      }
       lines.push(_);
 
       // constructor
@@ -231,7 +262,7 @@ docPage = async (path: string):Promise<Line[]> => {
       // lines.push(_);
 
       // methods
-      for (const method of (def.classDef.methods as MethodDef[]).sort(sort)) {
+      for (const method of (def.classDef.methods as MethodDef[]).sort(byName)) {
         // console.debug(`method: ${method.name}`);
         // header
         const 

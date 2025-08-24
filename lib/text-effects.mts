@@ -3,7 +3,7 @@ type CharacterMap = {
   [key: string]: string;
 };
 
-const enum Effect {
+const enum Effect { // TODO add monospace etc and use them in comments (consider them as Markdown)
   MathematicalSansSerifItalic,
 }
 

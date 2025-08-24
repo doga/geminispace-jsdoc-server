@@ -90,6 +90,7 @@ type DeclarationKind =
   | 'private';
 
 type ClassDefinition = {
+  jsDoc?: JsDoc,
   kind           : 'class',
   declarationKind: DeclarationKind,
   name           : string,
