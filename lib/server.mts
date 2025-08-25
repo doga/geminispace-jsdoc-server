@@ -14,7 +14,7 @@ import type {
   Param,
   Constructor, FunctionDef, MethodDef,
   ClassDef, DeclarationKind,
-  Definition, ClassDefinition,
+  Definition, ClassDefinition, ModuleDefinition,
   JsDocDocument
 } from './jsdoc-types.mts';
 
@@ -70,6 +70,9 @@ dirPage = async (path: string):Promise<Line[]> => {
   }
 },
 
+/**
+ * Handle all tags except the 'module' tag.
+ */
 getJsdocLines = (jsdoc: JsDoc):Line[] =>{ // TODO return Gemtext (can be nested)
   // console.debug(`[getJsdocLines] jsdoc`, jsdoc)
   const 
@@ -81,7 +84,10 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{ // TODO return Gemtext (can be nested)
 
   if(jsdoc.doc){
     lines.push(new LineText(
-      jsdoc.doc.trim() // TODO remove Markdown "code" markup https://www.markdownguide.org/cheat-sheet/
+      jsdoc.doc // TODO remove Markdown "code" markup https://www.markdownguide.org/cheat-sheet/
+
+      // ignore line breaks? no
+      // .split(/\r?\n/).join(' ').trim()
 
       // remove jsdoc link markup
       .replaceAll(jsdocLinkMatcher, replaceJsdocLink)
@@ -99,6 +105,10 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{ // TODO return Gemtext (can be nested)
       //   lines.push(new LineText(`🏷  ${tag.value}`));
       //   lines.push(_);
       //   break;
+
+      case 'module':
+        lines.unshift(new LineHeading(`${tag.name}`, 1), _);
+        break;
 
       case 'param':
         lines.push(new LineText(`🏷  𝗣𝗮𝗿𝗮𝗺𝗲𝘁𝗲𝗿 ${tag.name}: ${tag.type}`));
@@ -212,15 +222,30 @@ docPage = async (path: string):Promise<Line[]> => {
     expandedPath    = `${jsdocDir}/${path}`,
     json            = await Deno.readTextFile(expandedPath),
     jsdocDocument   = JSON.parse(json) as JsDocDocument,
+
+    // find exported module definition
+    exportedModule = (def: Definition|MethodDef)=> def.kind === 'moduleDoc' && def.declarationKind === 'export',
+    exportedModuleDefinition: ModuleDefinition | undefined = jsdocDocument.nodes.find(exportedModule) as ModuleDefinition,
+
+    // find exported class definitions
     exportedClasses = (def: Definition|MethodDef)=> def.kind === 'class' && def.declarationKind === 'export',
-    byName          = (def1: Definition|MethodDef, def2: Definition|MethodDef)=> (
+    byName          = (def1: ClassDefinition|MethodDef, def2: ClassDefinition|MethodDef)=> (
       def1.name < def2.name ? -1 : (def1.name === def2.name ? 0 : 1)
     ),
-    exportedClassDefinitions = jsdocDocument.nodes.filter(exportedClasses).sort(byName),
+    exportedClassDefinitions: ClassDefinition[] = (jsdocDocument.nodes.filter(exportedClasses) as ClassDefinition[]).sort(byName),
+
+    // init result
     lines: Line[] = [_];
+
+    // display exported module info
+    if (exportedModuleDefinition && exportedModuleDefinition.jsDoc) {
+      const jsdocLines = getJsdocLines(exportedModuleDefinition.jsDoc);
+      for (const line of jsdocLines) lines.push(line);
+    }
 
     // console.debug(`\ndefinitions`,definitions,definitions.length);
 
+    // display exported classes
     for (const def of exportedClassDefinitions) try {
       // console.debug(`\nDefinition(name: ${def.name}, kind: ${def.kind}, declarationKind: ${def.declarationKind})`);
       // header
@@ -372,11 +397,22 @@ dirRoute = new Route<{path?: string}>('/:path', async (ctx) => {
 
     // generate gemtext from scratch
     const 
-    lines = await dirPage(path),
-    gemtext = new Gemtext(
-      new LineHeading(`${path}`, 1), _,
-      ...lines,
-    );
+    lines = await dirPage(path);
+
+    // while (lines[0] instanceof Line && lines[0].string) {
+    //   lines.shift();
+    // }
+
+    // console.debug(`page lines: '${lines.map(l => l.string).join('')}'`);
+
+    // console.debug(`lines[0] instanceof LineHeading`,lines[0] instanceof LineHeading);
+    // for (const l of lines) console.debug(`line`,l.string,l.constructor.name);
+
+
+    if(!lines.find(line => line.string.startsWith('# '))) lines.unshift(new LineHeading(`${path}`, 1), _);
+
+    const
+    gemtext = new Gemtext(...lines);
     cache?.set(path, gemtext);
     ctx.response.body = gemtext;
   } catch (_error) {

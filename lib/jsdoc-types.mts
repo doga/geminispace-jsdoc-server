@@ -1,3 +1,9 @@
+
+type ModuleTag = {
+  kind: 'module',
+  name: string,
+};
+
 type SeeTag = {
   kind: 'see',
   doc: string, // TODO regex
@@ -30,10 +36,10 @@ type UnsupportedTag = {
   value: string,
 };
 
-type Tag = SeeTag | ReturnTag | ParamTag | ExampleTag | ThrowsTag | UnsupportedTag;
+type Tag = ModuleTag | SeeTag | ReturnTag | ParamTag | ExampleTag | ThrowsTag | UnsupportedTag;
 
 type JsDoc = {
-  doc: string, // TODO optional?
+  doc?: string,
   tags: {
     [key: number]: Tag,
   },
@@ -89,6 +95,12 @@ type DeclarationKind =
   | 'export'
   | 'private';
 
+type ModuleDefinition = {
+  jsDoc?: JsDoc,
+  kind: 'moduleDoc',
+  declarationKind: DeclarationKind,
+};
+
 type ClassDefinition = {
   jsDoc?: JsDoc,
   kind           : 'class',
@@ -97,7 +109,9 @@ type ClassDefinition = {
   classDef       : ClassDef,
 };
 
-type Definition = ClassDefinition;
+type Definition = 
+  | ModuleDefinition
+  | ClassDefinition;
 
 type JsDocDocument = {
   version: number,
@@ -109,6 +123,6 @@ export type {
   Param,
   Constructor, FunctionDef, MethodDef,
   ClassDef, DeclarationKind,
-  Definition, ClassDefinition,
+  Definition, ClassDefinition, ModuleDefinition,
   JsDocDocument
 };
