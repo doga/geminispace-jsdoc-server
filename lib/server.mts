@@ -294,7 +294,15 @@ docPage = async (path: string):Promise<Line[]> => {
         staticMarker = method.isStatic ? 'static ' : '',
         asyncMarker = method.functionDef.isAsync ? 'async ' : '',
         paramNames: string = (method.functionDef.params as Param[]).map(p => p.name).join(', '),
-        methodHeader: string = method.kind === 'getter' ? `getter ${method.name}` : `${staticMarker}${asyncMarker}${method.name}(${paramNames})`;
+        methodHeader: string = (
+          method.kind === 'getter' 
+          ? `get ${method.name}` 
+          : (
+            method.kind === 'setter' 
+            ? `set ${method.name}` 
+            : `${staticMarker}${asyncMarker}${method.name}(${paramNames})`
+          )
+        );
 
         // console.debug(`method header: ${methodHeader}`);
         lines.push(new LineHeading(methodHeader, 3)); lines.push(_);
