@@ -1,6 +1,6 @@
 {
   "name": "@arma/geminispace-jsdoc-server",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "exports": {
     ".": "./mod.mts",
     "./main": "./main.ts"
