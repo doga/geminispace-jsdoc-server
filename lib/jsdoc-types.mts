@@ -4,6 +4,11 @@ type ModuleTag = {
   name: string,
 };
 
+type TypeTag = {
+  kind: 'type',
+  type: string,
+};
+
 type SeeTag = {
   kind: 'see',
   doc: string, // TODO regex
@@ -36,7 +41,7 @@ type UnsupportedTag = {
   value: string,
 };
 
-type Tag = ModuleTag | SeeTag | ReturnTag | ParamTag | ExampleTag | ThrowsTag | UnsupportedTag;
+type Tag = ModuleTag | TypeTag | SeeTag | ReturnTag | ParamTag | ExampleTag | ThrowsTag | UnsupportedTag;
 
 type JsDoc = {
   doc?: string,
@@ -75,15 +80,25 @@ type MethodDef = {
   isStatic: boolean,
 };
 
+type PropertyDef = {
+  jsDoc?: JsDoc,
+  name: string,
+  isStatic: boolean,
+  kind: undefined,
+};
+
 
 type ClassDef = {
   jsDoc?: JsDoc,
-  extends: string,
+  extends?: string,
   implements: {
     [key: number]: string,
   },
   constructors: {
     [key: number]: Constructor,
+  },
+  properties: {
+    [key: number]: PropertyDef,
   },
   methods: {
     [key: number]: MethodDef,
@@ -121,7 +136,7 @@ type JsDocDocument = {
 export type {
   JsDoc, Tag, SeeTag, ExampleTag, ReturnTag, ParamTag, UnsupportedTag,
   Param,
-  Constructor, FunctionDef, MethodDef,
+  Constructor, FunctionDef, MethodDef, PropertyDef,
   ClassDef, DeclarationKind,
   Definition, ClassDefinition, ModuleDefinition,
   JsDocDocument

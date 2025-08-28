@@ -12,7 +12,7 @@ import {
 import type {
   JsDoc, Tag, SeeTag, ExampleTag, ReturnTag, ParamTag, UnsupportedTag,
   Param,
-  Constructor, FunctionDef, MethodDef,
+  Constructor, FunctionDef, MethodDef, PropertyDef,
   ClassDef, DeclarationKind,
   Definition, ClassDefinition, ModuleDefinition,
   JsDocDocument
@@ -118,6 +118,11 @@ getJsdocLines = (jsdoc: JsDoc):Line[] =>{ // TODO return Gemtext (can be nested)
 
           lines.push(new LineText(`  ${doc}`));
         }
+        lines.push(_);
+        break;
+
+      case 'type':
+        lines.push(new LineText(`🏷  𝗧𝘆𝗽𝗲 ${tag.type}`));
         lines.push(_);
         break;
 
@@ -229,7 +234,7 @@ docPage = async (path: string):Promise<Line[]> => {
 
     // find exported class definitions
     exportedClasses = (def: Definition|MethodDef)=> def.kind === 'class' && def.declarationKind === 'export',
-    byName          = (def1: ClassDefinition|MethodDef, def2: ClassDefinition|MethodDef)=> (
+    byName          = (def1: ClassDefinition|MethodDef|PropertyDef, def2: ClassDefinition|MethodDef|PropertyDef)=> (
       def1.name < def2.name ? -1 : (def1.name === def2.name ? 0 : 1)
     ),
     exportedClassDefinitions: ClassDefinition[] = (jsdocDocument.nodes.filter(exportedClasses) as ClassDefinition[]).sort(byName),
@@ -286,9 +291,32 @@ docPage = async (path: string):Promise<Line[]> => {
       }
       // lines.push(_);
 
+      // properties
+      for (const property of (def.classDef.properties as PropertyDef[]).sort(byName)) {
+        // header
+        const 
+        staticMarker   = property.isStatic ? 'static ' : '',
+        docStarter     = `${property.isStatic ? 'Class' : 'Instance'} property. `,
+        propertyHeader = `${staticMarker}${property.name}`;
+
+        lines.push(new LineHeading(propertyHeader, 3)); lines.push(_);
+
+        if (property.jsDoc) {
+          if (!property.jsDoc.doc) property.jsDoc.doc = '';
+          property.jsDoc.doc = `${docStarter}${property.jsDoc.doc}`;
+        } else {
+          property.jsDoc = {doc: docStarter, tags: []};
+        }
+        if (property.jsDoc) {
+          const jsdocLines = getJsdocLines(property.jsDoc);
+
+          for (const line of jsdocLines) lines.push(line);
+          lines.push(_);
+        }
+      }
+
       // methods
       for (const method of (def.classDef.methods as MethodDef[]).sort(byName)) {
-        // console.debug(`method: ${method.name}`);
         // header
         const 
         staticMarker = method.isStatic ? 'static ' : '',
