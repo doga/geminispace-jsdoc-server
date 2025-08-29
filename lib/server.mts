@@ -12,9 +12,10 @@ import {
 import type {
   JsDoc, Tag, SeeTag, ExampleTag, ReturnTag, ParamTag, UnsupportedTag,
   Param,
+  TsType, TsTypeArray, TsTypeRef,
   Constructor, FunctionDef, MethodDef, PropertyDef,
   ClassDef, DeclarationKind,
-  Definition, ClassDefinition, ModuleDefinition,
+  Definition, ClassDefinition, ModuleDefinition, VariableDefinition,
   JsDocDocument
 } from './jsdoc-types.mts';
 
@@ -29,11 +30,10 @@ keyFile         : string,
 cacheSize       : number,
 cache           : Cache | null,
 hostname        : string,
-port            : number
-;
+port            : number;
 
 const
-_         = new LineText(''),
+_ = new LineText(''),
 
 dirPage = async (path: string):Promise<Line[]> => {
   // console.debug(`dir path: ${path}`);
@@ -230,14 +230,21 @@ docPage = async (path: string):Promise<Line[]> => {
 
     // find exported module definition
     exportedModule = (def: Definition|MethodDef)=> def.kind === 'moduleDoc' && def.declarationKind === 'export',
-    exportedModuleDefinition: ModuleDefinition | undefined = jsdocDocument.nodes.find(exportedModule) as ModuleDefinition,
 
     // find exported class definitions
     exportedClasses = (def: Definition|MethodDef)=> def.kind === 'class' && def.declarationKind === 'export',
-    byName          = (def1: ClassDefinition|MethodDef|PropertyDef, def2: ClassDefinition|MethodDef|PropertyDef)=> (
+
+    // find exported class definitions
+    exportedVariables = (def: Definition|MethodDef)=> def.kind === 'variable' && def.declarationKind === 'export',
+
+    byName          = (def1: ClassDefinition|VariableDefinition|MethodDef|PropertyDef, def2: ClassDefinition|VariableDefinition|MethodDef|PropertyDef)=> (
       def1.name < def2.name ? -1 : (def1.name === def2.name ? 0 : 1)
     ),
+
+    // found objects
+    exportedModuleDefinition: ModuleDefinition | undefined = jsdocDocument.nodes.find(exportedModule) as ModuleDefinition,
     exportedClassDefinitions: ClassDefinition[] = (jsdocDocument.nodes.filter(exportedClasses) as ClassDefinition[]).sort(byName),
+    exportedVariableDefinitions: VariableDefinition[] = (jsdocDocument.nodes.filter(exportedVariables) as VariableDefinition[]).sort(byName),
 
     // init result
     lines: Line[] = [_];
@@ -348,10 +355,30 @@ docPage = async (path: string):Promise<Line[]> => {
       console.error(`🔴 def error:`,error);
     }
 
+    // display exported variables
+    for (const v of exportedVariableDefinitions) {
+      let varHeader = `const ${v.name}`;
+      if (v.variableDef?.tsType) {
+        if (v.variableDef.tsType.kind === 'typeRef') {
+          varHeader += `: ${v.variableDef.tsType.typeRef.typeName}`
+        } else if (v.variableDef.tsType.kind === 'array') {
+          varHeader += `: ${v.variableDef.tsType.array.keyword}[]`
+        } 
+      }
+      lines.push(new LineHeading(varHeader, 2));
+      if (v.jsDoc) {
+        // console.debug(`  reading jsdoc`);
+        const jsdocLines = getJsdocLines(v.jsDoc);
+
+        for (const line of jsdocLines) lines.push(line);
+      }
+      lines.push(_);
+    }
+
     lines.push(_);
     return lines;
-  } catch (_error) {
-    // console.error(`🔴 doc error:`,error);
+  } catch (error) {
+    console.error(`🔴 doc error:`,error);
     return [] as Line[];
     // lines.push(new LineHeading('Error'));
     // lines.push(new LineText(`${error}`));

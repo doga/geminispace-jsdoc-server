@@ -48,13 +48,33 @@ type JsDoc = {
   tags: {
     [key: number]: Tag,
   },
-}
+};
+
+type TsTypeRef = {
+  repr: string,
+  kind: 'typeRef',
+  typeRef: {
+    typeName: string,
+  },
+};
+
+type TsTypeArray = {
+  repr: string,
+  kind: 'array',
+  array: {
+    repr: string,
+    kind: 'keyword',
+    keyword: string
+  }
+};
+
+type TsType = TsTypeRef | TsTypeArray;
 
 type Param = {
   kind: 'identifier',
   name: string,
   optional: boolean,
-  tsType: string | null, // TODO verify
+  tsType: null,
 };
 
 type Constructor = {
@@ -75,7 +95,7 @@ type FunctionDef = {
 type MethodDef = {
   jsDoc?: JsDoc,
   name: string,
-  kind: 'getter' | 'setter' | 'method', // TODO verify 'setter'
+  kind: 'getter' | 'setter' | 'method',
   functionDef: FunctionDef,
   isStatic: boolean,
 };
@@ -85,8 +105,8 @@ type PropertyDef = {
   name: string,
   isStatic: boolean,
   kind: undefined,
+  tsType: TsType | null
 };
-
 
 type ClassDef = {
   jsDoc?: JsDoc,
@@ -103,7 +123,6 @@ type ClassDef = {
   methods: {
     [key: number]: MethodDef,
   },
-
 };
 
 type DeclarationKind =
@@ -124,9 +143,21 @@ type ClassDefinition = {
   classDef       : ClassDef,
 };
 
+type VariableDefinition = {
+  jsDoc?: JsDoc,
+  name: string,
+  kind: "variable",
+  variableDef: {
+    tsType: TsType | null,
+    kind: 'const' | 'var'
+  },
+  declarationKind: DeclarationKind,
+};
+
 type Definition = 
   | ModuleDefinition
-  | ClassDefinition;
+  | ClassDefinition
+  | VariableDefinition;
 
 type JsDocDocument = {
   version: number,
@@ -136,8 +167,9 @@ type JsDocDocument = {
 export type {
   JsDoc, Tag, SeeTag, ExampleTag, ReturnTag, ParamTag, UnsupportedTag,
   Param,
+  TsType, TsTypeArray, TsTypeRef,
   Constructor, FunctionDef, MethodDef, PropertyDef,
   ClassDef, DeclarationKind,
-  Definition, ClassDefinition, ModuleDefinition,
+  Definition, ClassDefinition, ModuleDefinition, VariableDefinition,
   JsDocDocument
 };
